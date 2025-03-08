@@ -1,0 +1,51 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <Button
+        android:id="@+id/btnSelectImage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/select_image" />
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:contentDescription="@string/todo"
+        android:scaleType="centerCrop"
+        android:layout_marginTop="10dp"/>
+
+    <TextView
+        android:id="@+id/tvExtractedText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/extracted_text_appears_here"
+        android:padding="10dp"
+        android:textSize="16sp"/>
+
+    <Spinner
+        android:id="@+id/spinnerLanguages"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:minHeight="48dp" />
+
+    <Button
+        android:id="@+id/scanButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/scan"
+        android:layout_marginTop="10dp"/>
+
+    <TextView
+        android:id="@+id/tvTranslatedText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/translated_text_appears_here"
+        android:padding="10dp"
+        android:textSize="16sp"/>
+
+</LinearLayout>

@@ -1,171 +1,65 @@
-package com.example;
+package com.example.myapplication;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.Matrix;
-import android.net.Uri;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.widget.ArrayAdapter;
+import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.Spinner;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.exifinterface.media.ExifInterface;
-
-import com.example.reportscanner.R;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.translate.Translate;
-import com.google.cloud.translate.TranslateOptions;
-import com.google.cloud.translate.Translation;
-import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
-import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
+public class MainActivity extends AppCompatActivity {
 
-class MainActivity extends AppCompatActivity {
+    private ExecutorService cameraExecutor;
 
-    private static final int PICK_IMAGE = 1;
-    private ImageView imageView;
-    private TextView tvExtractedText, tvTranslatedText;
-    private Spinner spinnerLanguages;
-    private String extractedText = "";
-    private HashMap<String, String> languageCodes;
-    private Translate translateClient; // Google Cloud Translation Client
-
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        imageView = findViewById(R.id.imageView);
-        tvExtractedText = findViewById(R.id.tvExtractedText);
-        tvTranslatedText = findViewById(R.id.tvTranslatedText);
-        spinnerLanguages = findViewById(R.id.spinnerLanguages);
-        Button btnSelectImage = findViewById(R.id.btnSelectImage);
-        Button btnTranslate = findViewById(R.id.btnTranslate);
+        Button scanButton;
+        findViewById(R.id.scanButton);
+        findViewById(R.id.textView);
 
-        // Initialize Google Cloud Translate API
-        initializeTranslateClient();
+        findViewById(R.id.textView);
+        scanButton = findViewById(R.id.scanButton);
 
-        // Populate language spinner
-        setupLanguageSpinner();
+        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
-        btnSelectImage.setOnClickListener(v -> openGallery());
-        btnTranslate.setOnClickListener(v -> translateText());
+        cameraExecutor = Executors.newSingleThreadExecutor();
+
+        scanButton.setOnClickListener(this::onClick);
     }
 
-    private void openGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(intent, PICK_IMAGE);
+    private void startCamera() throws ExecutionException, InterruptedException {
+        ProcessCameraProvider.getInstance(this).get();
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null) {
-            Uri imageUri = data.getData();
-            imageView.setImageURI(imageUri);
-            extractTextFromImage(imageUri);
-        }
+    protected void onDestroy() {
+        super.onDestroy();
+        cameraExecutor.shutdown();
     }
 
-    @SuppressLint("SetTextI18n")
-    private void extractTextFromImage(Uri imageUri) {
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-            bitmap = rotateImageIfRequired(bitmap, imageUri);
-            InputImage image = InputImage.fromBitmap(bitmap, 0);
-            TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
-
-            recognizer.process(image)
-                    .addOnSuccessListener(text -> {
-                        extractedText = text.getText();
-                        tvExtractedText.setText(extractedText);
-                    })
-                    .addOnFailureListener(e -> tvExtractedText.setText("Failed to extract text."));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @SuppressLint("SetTextI18n")
-    private void translateText() {
-        if (extractedText.isEmpty()) {
-            Toast.makeText(this, "No text extracted to translate!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String targetLanguageCode = languageCodes.get(spinnerLanguages.getSelectedItem().toString());
-
-        new Thread(() -> {
+    private void onClick(View v) {
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 100);
+        } else {
             try {
-                Translation translation = translateClient.translate(
-                        extractedText, Translate.TranslateOption.targetLanguage(targetLanguageCode)
-                );
-
-                runOnUiThread(() -> tvTranslatedText.setText(translation.getTranslatedText()));
-            } catch (Exception e) {
-                runOnUiThread(() -> tvTranslatedText.setText("Translation failed. Check API credentials."));
+                startCamera();
+            } catch (ExecutionException | InterruptedException e) {
+                throw new RuntimeException(e);
             }
-        }).start();
-    }
-
-    private void setupLanguageSpinner() {
-        languageCodes = new HashMap<>();
-        languageCodes.put("English", "en");
-        languageCodes.put("Spanish", "es");
-        languageCodes.put("French", "fr");
-        languageCodes.put("Hindi", "hi");
-        languageCodes.put("Chinese", "zh");
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languageCodes.keySet().toArray(new String[0]));
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerLanguages.setAdapter(adapter);
-    }
-
-    private void initializeTranslateClient() {
-        new Thread(() -> {
-            try {
-                InputStream stream = getAssets().open("credentials.json");
-                GoogleCredentials credentials = GoogleCredentials.fromStream(stream);
-                translateClient = TranslateOptions.newBuilder().setCredentials(credentials).build().getService();
-            } catch (IOException e) {
-                runOnUiThread(() -> Toast.makeText(this, "Failed to initialize Google Cloud Translation API!", Toast.LENGTH_LONG).show());
-            }
-        }).start();
-    }
-
-    private Bitmap rotateImageIfRequired(Bitmap img, Uri selectedImage) throws IOException {
-        InputStream input = getContentResolver().openInputStream(selectedImage);
-        assert input != null;
-        ExifInterface ei = new ExifInterface(input);
-        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-
-        switch (orientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                return rotateImage(img, 90);
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                return rotateImage(img, 180);
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                return rotateImage(img, 270);
-            default:
-                return img;
         }
-    }
-
-    private Bitmap rotateImage(Bitmap img, int degree) {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(degree);
-        return Bitmap.createBitmap(img, 0, 0, img.getWidth(), img.getHeight(), matrix, true);
     }
 }
