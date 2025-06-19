@@ -1,0 +1,37 @@
+.result-container {
+    display:flex;
+    flex-direction:column;
+    align-items: center;
+    padding: 4rem 1rem;
+    background-color: #fff7ed;
+    height: 100vh;
+}
+
+.result-heading {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #78350f;
+    transition: letter-spacing 0.3s ease;
+}
+
+.result-heading:hover {
+    letter-spacing: 2px;
+}
+
+.result-box {
+    padding: 1.5rem;
+    background-color: #fed7aa;
+    color: #3b0e02;
+    border-radius: 16px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3 ease,transform 0.2 ease;
+}
+
+
+.result-box:hover {
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    transform: translateY(-4px);
+}
